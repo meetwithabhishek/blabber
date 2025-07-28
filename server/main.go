@@ -12,7 +12,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"github.com/meetwithabhishek/blabber"
+	"github.com/meetwithabhishek/blabber/common"
 )
 
 func init() {
@@ -52,7 +52,7 @@ func websocketConnHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	var request blabber.WebSocketMessage
+	var request common.WebSocketMessage
 
 	for {
 		_, message, err := c.ReadMessage()
@@ -66,7 +66,7 @@ func websocketConnHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch request.MessageType {
-		case blabber.ClientDataMessage:
+		case common.ClientDataMessage:
 			if len(strings.Trim(string(request.Message), " \n")) == 0 {
 				log.Printf("received empty message, skipping")
 				continue
@@ -104,12 +104,12 @@ func broadcastDataMessage(m Message) error {
 			return false
 		}
 
-		data, err := json.Marshal(blabber.MessageResponse{Username: m.Username, Message: m.Message})
+		data, err := json.Marshal(common.MessageResponse{Username: m.Username, Message: m.Message})
 		if err != nil {
 			log.Fatalf("failed to marshal message: %v", err)
 		}
 
-		data, err = json.Marshal(blabber.WebSocketMessage{MessageType: blabber.ServerDataMessage, Message: data})
+		data, err = json.Marshal(common.WebSocketMessage{MessageType: common.ServerDataMessage, Message: data})
 		if err != nil {
 			log.Fatalf("failed to marshal message: %v", err)
 		}
@@ -131,10 +131,10 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		var response []blabber.MessageResponse
+		var response []common.MessageResponse
 
 		for _, v := range messages {
-			response = append(response, blabber.MessageResponse{Username: v.Username, Message: v.Message})
+			response = append(response, common.MessageResponse{Username: v.Username, Message: v.Message})
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -169,7 +169,7 @@ func main() {
 // GetPlayPath gives the absolute path for the safe directory inside the tool's config directory.
 func GetPlayPath(elem ...string) string {
 	h := os.Getenv("HOME")
-	pl := path.Join(h, "."+blabber.AppName)
+	pl := path.Join(h, "."+common.AppName)
 
 	return path.Join(append([]string{pl}, elem...)...)
 }

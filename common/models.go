@@ -1,4 +1,4 @@
-package blabber
+package common
 
 type MessageResponse struct {
 	Username string

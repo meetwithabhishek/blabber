@@ -15,6 +15,8 @@ type Config struct {
 	ServerAddress string `yaml:"serverAddress"`
 }
 
+var conf Config
+
 const ClientConfigFilename = "client.conf"
 
 var promptStyle = lipgloss.NewStyle().
@@ -27,7 +29,7 @@ var inputStyle = lipgloss.NewStyle().
 	Italic(true).
 	Foreground(lipgloss.Color("#FF6188")) // pink/red
 
-func ensureConfigExists() error {
+func ensureConfig() error {
 	// create a sample config file, if it doesn't exists
 	_, err := os.Stat(GetPlayPath())
 	if err != nil {
@@ -89,8 +91,22 @@ func ensureConfigExists() error {
 			return err
 		}
 
-		defer file.Close()
+		file.Close()
 	} else if err != nil {
+		return err
+	}
+
+	// Load Conf
+
+	path := GetPlayPath(ClientConfigFilename)
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	err = yaml.Unmarshal(data, &conf)
+	if err != nil {
 		return err
 	}
 

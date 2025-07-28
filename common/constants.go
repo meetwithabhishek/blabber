@@ -1,3 +1,3 @@
-package blabber
+package common
 
 const AppName = "blabber"

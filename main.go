@@ -5,49 +5,49 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"path"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/gemalto/requester"
-	"github.com/meetwithabhishek/blabber"
+	"github.com/meetwithabhishek/blabber/common"
 	"golang.org/x/net/websocket"
 )
 
-const Username = "abhishek"
-
 type model struct {
-	messages []blabber.MessageResponse
+	messages []common.MessageResponse
 	input    string
 	ws       *websocket.Conn
 }
 
 var teaProgram *tea.Program
 
-var styleUsername = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Color("#FAFAFA")).
-	Background(lipgloss.Color("#7D56F4"))
-	// Background(lipgloss.ANSIColor(rand.Intn(7)))
-
 var styleText = lipgloss.NewStyle().
 	Bold(true).
 	Foreground(lipgloss.Color("#FAFAFA"))
 
 func initModel() *model {
+	address := net.JoinHostPort(conf.ServerAddress, "8080")
+
+	replaceAddress := func(s string) string {
+		return strings.Replace(s, "<server-address>", address, 1)
+	}
+
 	// Fetch initial messages
-	var r []blabber.MessageResponse
+	var r []common.MessageResponse
 	_, _, err := requester.ReceiveContext(context.Background(), &r,
-		requester.Get("http://localhost:8080/messages"),
+		requester.Get(replaceAddress("http://<server-address>/messages")),
 	)
 	if err != nil {
 		panic(err)
 	}
 
 	// Establish WebSocket connection
-	wsURL := "ws://localhost:8080/ws?username=" + Username
-	ws, err := websocket.Dial(wsURL, "", "http://localhost/")
+	wsURL := replaceAddress("ws://<server-address>/ws?username=") + conf.Username
+	ws, err := websocket.Dial(wsURL, "", replaceAddress("http://<server-address>/"))
 	if err != nil {
 		log.Fatalf("Failed to connect to WebSocket server: %v", err)
 	}
@@ -63,7 +63,7 @@ func initModel() *model {
 }
 
 func (m *model) websocketLoop() {
-	var data blabber.WebSocketMessage
+	var data common.WebSocketMessage
 	var dataInBytes []byte
 
 	for {
@@ -76,8 +76,8 @@ func (m *model) websocketLoop() {
 		}
 
 		switch data.MessageType {
-		case blabber.ServerDataMessage:
-			var response blabber.MessageResponse
+		case common.ServerDataMessage:
+			var response common.MessageResponse
 			err := json.Unmarshal(data.Message, &response)
 			if err != nil {
 				log.Fatalf(`failed to unmarshal message response: %v`, err)
@@ -103,7 +103,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "enter":
 			// Send the message to the WebSocket server
-			data, err := json.Marshal(blabber.WebSocketMessage{MessageType: blabber.ClientDataMessage, Message: []byte(m.input)})
+			data, err := json.Marshal(common.WebSocketMessage{MessageType: common.ClientDataMessage, Message: []byte(m.input)})
 			if err != nil {
 				log.Fatalf("Failed to marshal message: %v", err)
 			}
@@ -125,14 +125,17 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) View() string {
 	var s string
 	for _, v := range m.messages {
-		s += styleUsername.Render(v.Username) + ": " + styleText.Render(v.Message) + "\n\n"
+		s += getUsernameStyle(v.Username).Render(v.Username) + ": " + styleText.Render(v.Message) + "\n\n"
 	}
-	s += styleUsername.Render(Username) + ": " + styleText.Render(m.input)
+	s += getUsernameStyle(conf.Username).Render(conf.Username) + ": " + styleText.Render(m.input)
 	return s
 }
 
 func main() {
-	ensureConfigExists()
+	err := ensureConfig()
+	if err != nil {
+		log.Fatalf("failed to create config: %v", err)
+	}
 
 	p := tea.NewProgram(initModel())
 	teaProgram = p
@@ -145,7 +148,7 @@ func main() {
 // GetPlayPath gives the absolute path for the safe directory inside the tool's config directory.
 func GetPlayPath(elem ...string) string {
 	h := os.Getenv("HOME")
-	pl := path.Join(h, "."+blabber.AppName)
+	pl := path.Join(h, "."+common.AppName)
 
 	return path.Join(append([]string{pl}, elem...)...)
 }
