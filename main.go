@@ -132,7 +132,7 @@ func (m *model) View() string {
 }
 
 func main() {
-	err := ensureConfig()
+	err := ensureConfigExists()
 	if err != nil {
 		log.Fatalf("failed to create config: %v", err)
 	}
@@ -145,7 +145,9 @@ func main() {
 	}
 }
 
-// GetPlayPath gives the absolute path for the safe directory inside the tool's config directory.
+// PlayPath is a directory where tool can store its data files, config files, cache files, etc.
+// Its a directory just for this tool. 
+// GetPlayPath takes options elements to append to the base play path and returns the full path.
 func GetPlayPath(elem ...string) string {
 	h := os.Getenv("HOME")
 	pl := path.Join(h, "."+common.AppName)

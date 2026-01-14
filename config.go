@@ -25,11 +25,15 @@ var promptStyle = lipgloss.NewStyle().
 	Background(lipgloss.Color("#7D56F4"))
 
 	// Define a style for the input echoed back
-var inputStyle = lipgloss.NewStyle().
+var _ = lipgloss.NewStyle().
 	Italic(true).
 	Foreground(lipgloss.Color("#FF6188")) // pink/red
 
-func ensureConfig() error {
+var infoStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("#A9B7C6")).
+	Italic(true)
+
+func ensureConfigExists() error {
 	// create a sample config file, if it doesn't exists
 	_, err := os.Stat(GetPlayPath())
 	if err != nil {
@@ -47,7 +51,7 @@ func ensureConfig() error {
 			return createErr
 		}
 
-		fmt.Println(inputStyle.Render("Config doesn't exists, creating config"))
+		fmt.Println(infoStyle.Render("First time user, creating config, please provide the following details:"))
 		fmt.Println()
 
 		// Print styled prompt
@@ -62,8 +66,6 @@ func ensureConfig() error {
 		}
 
 		username := strings.TrimSpace(input) // clean newline
-
-		fmt.Println()
 
 		// Print styled prompt
 		fmt.Print(promptStyle.Render("Enter Server Address") + ": ")
